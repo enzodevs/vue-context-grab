@@ -76,6 +76,7 @@ function formatSelectionContext(snapshot, options = {}) {
 	const ratio = trimNumber(snapshot.viewport.devicePixelRatio);
 	const bounds = snapshot.bounds;
 	return [
+		"<component>",
 		"## Vue UI context",
 		"",
 		"Requested change: _describe the desired UI/UX adjustment here_",
@@ -100,7 +101,8 @@ function formatSelectionContext(snapshot, options = {}) {
 		"Sanitized HTML:",
 		"```html",
 		html,
-		"```"
+		"```",
+		"</component>"
 	].join("\n");
 }
 function sanitizeAttributes(element) {
@@ -575,4 +577,4 @@ const UI_CSS = `
 //#endregion
 export { sanitizeElementHtml as i, formatSelectionContext as n, redactSensitiveText as r, installVueContextGrab as t };
 
-//# sourceMappingURL=client-BW6xJTg9.mjs.map
+//# sourceMappingURL=client-C4H9XwOg.mjs.map

@@ -28,11 +28,15 @@ UI feedback often starts like this: "the small button near the top right looks f
 Vue Context Grab turns the rendered element into concrete context:
 
 ```text
-<button>
-resources/js/components/student/StudentCommandPalette.vue:210:12
+<component>
+## Vue UI context
+
+Source: `resources/js/components/student/StudentCommandPalette.vue:210:12` (`button`)
+...
+</component>
 ```
 
-The copied payload also includes the route, viewport, preferred color scheme, source ancestry, element bounds, sanitized markup, and a focused set of computed styles. You paste it into Codex, Claude Code, or another coding assistant and describe the change.
+The XML-style boundary arrives on your clipboard with the payload, so you do not need to wrap it by hand. The payload also includes the route, viewport, preferred color scheme, source ancestry, element bounds, sanitized markup, and a focused set of computed styles. You paste it into Codex, Claude Code, or another coding assistant and describe the change.
 
 ## Quickstart
 

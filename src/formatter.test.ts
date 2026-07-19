@@ -72,6 +72,8 @@ describe("formatSelectionContext", () => {
     const second = formatSelectionContext(input, { maxHtmlLength: 500, maxAncestors: 3 });
 
     expect(first).toBe(second);
+    expect(first.startsWith("<component>\n## Vue UI context")).toBe(true);
+    expect(first.endsWith("```\n</component>")).toBe(true);
     expect(first).toContain("Route: `/school/dashboard`");
     expect(first).toContain("Viewport: `1440 × 900 @2x` · preferred scheme: `dark`");
     expect(first).toContain("`resources/js/pages/school/Dashboard.vue:42:9` (`MetricCard`)");

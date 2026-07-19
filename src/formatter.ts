@@ -100,6 +100,7 @@ export function formatSelectionContext(
   const bounds = snapshot.bounds;
 
   return [
+    "<component>",
     "## Vue UI context",
     "",
     "Requested change: _describe the desired UI/UX adjustment here_",
@@ -121,6 +122,7 @@ export function formatSelectionContext(
     "```html",
     html,
     "```",
+    "</component>",
   ].join("\n");
 }
 
