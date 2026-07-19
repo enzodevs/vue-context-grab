@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "vue-context-grab",
+  "version": "0.1.0",
+  "description": "Select a Vue UI element in development and copy safe, source-aware context for an AI coding assistant.",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "SPEC.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./client": {
+      "types": "./dist/client.d.mts",
+      "import": "./dist/client.mjs"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.mts",
+      "import": "./dist/vite.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "bun run format:check && bun run lint && bun run types:check && bun run test && bun run build && bun run package:check",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix",
+    "package:check": "publint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "types:check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "vite-plugin-vue-inspector": "^7.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1",
+    "oxfmt": "^0.59.0",
+    "oxlint": "^1.74.0",
+    "oxlint-tsgolint": "^0.25.0",
+    "publint": "^0.3.18",
+    "tsdown": "^0.22.12",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.2",
+    "vitest": "^4.1.9",
+    "vue": "^3.5.39"
+  },
+  "peerDependencies": {
+    "vite": "^6.0.0 || ^7.0.0 || ^8.0.0",
+    "vue": "^3.5.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "bun@1.3.14"
+}
