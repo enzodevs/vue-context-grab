@@ -51,7 +51,7 @@ vueContextGrab({
   appendTo: /resources\/js\/app\.ts$/,
   projectRoot: process.cwd(),
   shortcut: { control: true, key: "c" },
-  buttonPosition: "bottom-left",
+  buttonPosition: "bottom-center",
   maxHtmlLength: 4_000,
   maxTextLength: 240,
   maxAncestors: 5,

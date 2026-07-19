@@ -1,4 +1,9 @@
-export type ButtonPosition = "bottom-left" | "bottom-right" | "top-left" | "top-right";
+export type ButtonPosition =
+  | "bottom-left"
+  | "bottom-center"
+  | "bottom-right"
+  | "top-left"
+  | "top-right";
 
 export interface ShortcutOptions {
   key: string;

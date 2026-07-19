@@ -24,6 +24,7 @@ Out of scope: autonomous code editing, an MCP/relay daemon, screenshots, product
 | R-008 | The package uses Bun, TypeScript strict mode, Oxc lint/format, Vitest, tsdown, and publint.                                                                                                                                                                                                       |
 | R-009 | Rendered text is labeled as untrusted UI data and cannot terminate its Markdown code fence, reducing prompt-injection ambiguity when a developer pastes the payload into an assistant.                                                                                                            |
 | R-010 | The picker identifies highlighted DOM elements with an XML-style tag and source path, adapts its compact controls to narrow viewports, and shows a brief check-mark confirmation after clipboard success without delaying deactivation.                                                           |
+| R-011 | Hosts can place the picker at the bottom center as well as the four viewport corners, with centering preserved across responsive viewport widths.                                                                                                                                                 |
 
 ## Acceptance criteria
 
@@ -111,6 +112,7 @@ The adapter accepts optional `appendTo`, `shortcut`, `buttonPosition`, `projectR
 - [x] T-006 Install a packed release in the Reda Pro host and verify lint, types, unit tests, production build, and codebase health.
 - [x] T-007 Add source-aware arrow navigation with parent/child history, sibling traversal, and Enter-to-copy.
 - [x] T-008 Add responsive XML-tag selection labels and accessible copied-state feedback.
+- [x] T-009 Add and verify a responsive bottom-center picker position.
 
 ## Deferred decisions
 

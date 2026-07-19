@@ -139,6 +139,56 @@ describe("installVueContextGrab", () => {
     first.dispose();
   });
 
+  it("supports a viewport-centered bottom position", () => {
+    const controller = installVueContextGrab({ buttonPosition: "bottom-center" });
+    const host = document.querySelector("[data-vue-context-grab]")!;
+    const root = host.shadowRoot!.querySelector(".root")!;
+    const styles = host.shadowRoot!.querySelector("style")!.textContent;
+
+    expect(root.classList).toContain("bottom-center");
+    expect(styles).toContain(".bottom-center button");
+
+    controller.dispose();
+  });
+
+  it("copies the currently highlighted element with Enter", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    document.body.innerHTML = "<button>Save</button>";
+    const element = document.querySelector("button")!;
+    const trace = {
+      el: element,
+      vnode: undefined,
+      pos: ["resources/js/components/SaveButton.vue", 12, 3],
+      filepath: "resources/js/components/SaveButton.vue",
+      fullpath: "resources/js/components/SaveButton.vue:12:3",
+      rect: DOMRect.fromRect({ x: 10, y: 20, width: 100, height: 40 }),
+      getParent: () => undefined,
+    };
+    const controller = installVueContextGrab();
+    controller.activate();
+    inspector.emit("hover", trace);
+
+    const enter = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(enter);
+
+    expect(enter.defaultPrevented).toBe(true);
+    await vi.waitFor(() => {
+      expect(writeText).toHaveBeenCalledOnce();
+      expect(controller.active).toBe(false);
+    });
+    expect(writeText.mock.calls[0]?.[0]).toContain(`\`${trace.fullpath}\``);
+
+    controller.dispose();
+  });
+
   it("copies a source-aware payload and exits selection mode", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {

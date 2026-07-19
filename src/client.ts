@@ -58,13 +58,11 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
   const resolved = resolveClientOptions(options);
   const ui = createUi(resolved.buttonPosition, resolved.shortcut);
   let currentInfo: ElementTraceInfo | undefined;
-  let isKeyboardSelection = false;
   let verticalHistory: ElementTraceInfo[] = [];
   let copiedFeedbackTimer: number | undefined;
   const unsubscribe = [
     events.on("hover", (info) => {
       currentInfo = info;
-      isKeyboardSelection = false;
       verticalHistory = [];
       renderHighlight(ui, info);
     }),
@@ -86,7 +84,6 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
     clearCopiedFeedback();
     if (!active) {
       currentInfo = undefined;
-      isKeyboardSelection = false;
       verticalHistory = [];
     }
     isEnabled.value = active;
@@ -102,7 +99,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
     }
 
     if (isEnabled.value && !shouldPreserveNavigation(event)) {
-      if (event.key === "Enter" && isKeyboardSelection && currentInfo) {
+      if (event.key === "Enter" && currentInfo) {
         event.preventDefault();
         event.stopPropagation();
         void captureSelection(currentInfo);
@@ -128,7 +125,6 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
         event.preventDefault();
         event.stopPropagation();
         currentInfo = nextInfo;
-        isKeyboardSelection = true;
         renderHighlight(ui, nextInfo);
         ui.status.textContent = `Selected ${nextInfo.fullpath}. Use arrows to navigate or Enter to copy.`;
         return;
@@ -515,6 +511,9 @@ const UI_CSS = `
   :host([data-active]) button { border-color: var(--accent); background: #164e63; }
   :host([data-copied]) button { border-color: var(--success); background: #14532d; }
   .bottom-left button { left: 16px; bottom: 16px; }
+  .bottom-center button { left: 50%; bottom: 16px; transform: translateX(-50%); }
+  .bottom-center button:hover { transform: translateX(-50%) translateY(-1px); }
+  .bottom-center button:active { transform: translateX(-50%) scale(.97); }
   .bottom-right button { right: 16px; bottom: 16px; }
   .top-left button { left: 16px; top: 16px; }
   .top-right button { right: 16px; top: 16px; }
@@ -530,7 +529,7 @@ const UI_CSS = `
   .sr-status { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   @keyframes copied-pop { 0% { transform: scale(.72) rotate(-5deg); } 70% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1) rotate(0); } }
   @keyframes copied-check { 0% { opacity: 0; transform: scale(0) rotate(42deg); } 70% { opacity: 1; transform: scale(1.2) rotate(42deg); } 100% { opacity: 1; transform: scale(1) rotate(42deg); } }
-  @media (max-width: 520px) { button { max-width: calc(100vw - 24px); } kbd { display: none; } .label { gap: 5px; max-width: calc(100vw - 24px); } .source { max-width: 58vw; } .bottom-left button, .top-left button { left: 12px; } .bottom-right button, .top-right button { right: 12px; } }
+  @media (max-width: 520px) { button { max-width: calc(100vw - 24px); } kbd { display: none; } .label { gap: 5px; max-width: calc(100vw - 24px); } .source { max-width: 58vw; } .bottom-left button, .top-left button { left: 12px; } .bottom-right button, .top-right button { right: 12px; } .bottom-center button { bottom: 12px; } }
   @media (forced-colors: active) { button, .highlight, .label { border: 2px solid ButtonText; forced-color-adjust: auto; } }
   @media (prefers-reduced-motion: reduce) { button, .target, .highlight { animation: none !important; transition: none !important; } }
 `;
