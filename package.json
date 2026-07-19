@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "vue-context-grab",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Select a Vue UI element in development and copy safe, source-aware context for an AI coding assistant.",
   "keywords": [
     "ai",
@@ -51,7 +51,7 @@
     "lint": "oxlint --type-aware",
     "lint:fix": "oxlint --type-aware --fix",
     "package:check": "publint",
-    "prepare": "bun run build",
+    "prepack": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "types:check": "tsc --noEmit"

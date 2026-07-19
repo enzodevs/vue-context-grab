@@ -530,7 +530,7 @@ const UI_CSS = `
   :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; color-scheme: dark; }
   *, *::before, *::after { box-sizing: border-box; }
   .root { --accent: #67e8f9; --ink: #f8fafc; --surface: #09090b; --success: #86efac; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-  .toolbar { position: fixed; display: inline-flex; align-items: stretch; gap: 4px; pointer-events: none; }
+  .toolbar { position: fixed; display: inline-flex; align-items: center; gap: 4px; pointer-events: none; transition: gap 180ms cubic-bezier(.22, 1, .36, 1); }
   button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 7px 10px; border: 1px solid #3f3f46; border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--ink); box-shadow: 0 12px 32px rgb(0 0 0 / 35%); font: 600 12px/1.2 inherit; letter-spacing: .01em; cursor: pointer; pointer-events: auto; backdrop-filter: blur(10px); transition: transform 150ms cubic-bezier(.22, 1, .36, 1), border-color 150ms ease-out, background-color 150ms ease-out, max-width 180ms cubic-bezier(.22, 1, .36, 1), padding 180ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease-out; }
   button:hover { border-color: #71717a; transform: translateY(-1px); }
   button:active { transform: scale(.97); }
@@ -546,8 +546,10 @@ const UI_CSS = `
   .picker { max-width: 240px; overflow: hidden; white-space: nowrap; }
   .minimize { width: 30px; padding: 7px; gap: 0; }
   .minimize-icon { width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 180ms cubic-bezier(.22, 1, .36, 1); }
-  :host([data-minimized]) .picker { max-width: 0; min-width: 0; padding-inline: 0; border-inline-width: 0; opacity: 0; pointer-events: none; transform: none; }
-  :host([data-minimized]) .minimize-icon { transform: translateY(2px) rotate(225deg); }
+  :host([data-minimized]) .toolbar { gap: 0; }
+  :host([data-minimized]) .picker { width: 0; max-width: 0; min-width: 0; min-height: 0; height: 0; padding: 0; border-width: 0; opacity: 0; visibility: hidden; pointer-events: none; transform: none; }
+  :host([data-minimized]) .minimize { width: 24px; min-height: 24px; padding: 7px; border-radius: 999px; box-shadow: 0 5px 16px rgb(0 0 0 / 28%); }
+  :host([data-minimized]) .minimize-icon { width: 7px; height: 7px; border-width: 1.5px; border-left: 0; border-top: 0; transform: translateY(2px) rotate(225deg); }
   .target { position: relative; display: inline-flex; width: 22px; height: 18px; flex: 0 0 auto; align-items: center; justify-content: center; border: 1px solid #52525b; border-radius: 5px; color: var(--accent); font: 700 10px/1 ui-monospace, monospace; box-shadow: 2px 2px 0 #27272a; transition: transform 180ms cubic-bezier(.175, .885, .32, 1.275), width 180ms ease-out, border-radius 180ms ease-out, background-color 180ms ease-out, box-shadow 180ms ease-out; }
   .target::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 9px; border: solid #052e16; border-width: 0 2px 2px 0; border-radius: 1px; opacity: 0; transform: scale(0) rotate(42deg); }
   :host([data-copied]) .target { width: 18px; color: transparent; background: var(--success); border-color: var(--success); border-radius: 58% 42% 55% 45% / 46% 58% 42% 54%; box-shadow: 2px 2px 0 #052e16; animation: copied-pop 320ms cubic-bezier(.175, .885, .32, 1.275) both; }

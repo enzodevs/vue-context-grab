@@ -157,11 +157,14 @@ describe("installVueContextGrab", () => {
     const minimizeButton = host.shadowRoot!.querySelector<HTMLButtonElement>(
       '[aria-label="Minimize Vue picker"]',
     )!;
+    const styles = host.shadowRoot!.querySelector("style")!.textContent;
 
     minimizeButton.click();
     expect(host.hasAttribute("data-minimized")).toBe(true);
     expect(minimizeButton.getAttribute("aria-expanded")).toBe("false");
     expect(minimizeButton.getAttribute("aria-label")).toBe("Expand Vue picker");
+    expect(styles).toContain(":host([data-minimized]) .toolbar { gap: 0; }");
+    expect(styles).toContain("width: 24px; min-height: 24px");
 
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true }),
