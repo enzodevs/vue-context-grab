@@ -8,8 +8,7 @@ import type {
 
 export const DEFAULT_SHORTCUT: Readonly<ShortcutOptions> = {
   key: "c",
-  alt: true,
-  shift: true,
+  control: true,
 };
 
 export const DEFAULT_BUTTON_POSITION: ButtonPosition = "bottom-left";

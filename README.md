@@ -9,7 +9,7 @@ The tool is local and explicit: it writes only to the clipboard after a selectio
 Until the package has a registry or Git remote, install a reviewed packed release:
 
 ```sh
-bun add -d ./vue-context-grab-0.1.0.tgz
+bun add -d ./vue-context-grab-0.1.1.tgz
 ```
 
 After publication, the intended registry command is `bun add -d vue-context-grab`.
@@ -32,7 +32,7 @@ export default defineConfig({
 
 ## Use
 
-- Choose **Pick UI** or press `Alt+Shift+C`.
+- Choose **Pick UI** or press `Ctrl+C` when no form field or text selection is active. Native copy remains unchanged while editing or copying selected text.
 - Hover a Vue element to confirm its source and bounds.
 - Click to copy context and exit selection mode.
 - Press Escape to cancel.
@@ -47,7 +47,7 @@ Rendered text is preserved only within configured length limits and is labeled a
 vueContextGrab({
   appendTo: /resources\/js\/app\.ts$/,
   projectRoot: process.cwd(),
-  shortcut: { alt: true, shift: true, key: "c" },
+  shortcut: { control: true, key: "c" },
   buttonPosition: "bottom-left",
   maxHtmlLength: 4_000,
   maxTextLength: 240,

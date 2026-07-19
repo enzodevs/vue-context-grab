@@ -51,7 +51,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
   if (typeof document === "undefined") return createServerController();
 
   const resolved = resolveClientOptions(options);
-  const ui = createUi(resolved.buttonPosition);
+  const ui = createUi(resolved.buttonPosition, resolved.shortcut);
   const unsubscribe = [
     events.on("hover", (info) => renderHighlight(ui, info)),
     events.on("click", (info) => void captureSelection(info)),
@@ -73,6 +73,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
     }
 
     if (!event.repeat && resolved.shortcut !== false && matchesShortcut(event, resolved.shortcut)) {
+      if (!isEnabled.value && shouldPreserveNativeCopy()) return;
       event.preventDefault();
       setActive(!isEnabled.value);
     }
@@ -201,6 +202,19 @@ function matchesShortcut(event: KeyboardEvent, shortcut: ShortcutOptions): boole
   );
 }
 
+function shouldPreserveNativeCopy(): boolean {
+  const activeElement = document.activeElement;
+  if (
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    (activeElement instanceof HTMLElement && activeElement.isContentEditable)
+  ) {
+    return true;
+  }
+
+  return Boolean(window.getSelection()?.toString());
+}
+
 async function copyText(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -227,7 +241,7 @@ interface UiElements {
   status: HTMLElement;
 }
 
-function createUi(position: string): UiElements {
+function createUi(position: string, shortcut: ShortcutOptions | false): UiElements {
   const host = document.createElement("div");
   host.dataset.vueContextGrab = "";
   host.setAttribute("data-v-inspector-ignore", "");
@@ -240,12 +254,15 @@ function createUi(position: string): UiElements {
     <button type="button" aria-pressed="false" aria-label="Select Vue UI to copy context">
       <span class="target" aria-hidden="true"></span>
       <span class="button-label">Pick UI</span>
-      <kbd>Alt ⇧ C</kbd>
+      <kbd></kbd>
     </button>
     <div class="highlight" aria-hidden="true"><span class="label"></span></div>
     <span class="sr-status" aria-live="polite"></span>
   `;
   shadow.append(style, root);
+  const shortcutHint = root.querySelector<HTMLElement>("kbd")!;
+  shortcutHint.textContent = shortcut === false ? "" : formatShortcut(shortcut);
+  shortcutHint.hidden = shortcut === false;
 
   return {
     host,
@@ -254,6 +271,18 @@ function createUi(position: string): UiElements {
     label: root.querySelector<HTMLElement>(".label")!,
     status: root.querySelector<HTMLElement>(".sr-status")!,
   };
+}
+
+function formatShortcut(shortcut: ShortcutOptions): string {
+  return [
+    shortcut.control ? "Ctrl" : undefined,
+    shortcut.meta ? "⌘" : undefined,
+    shortcut.alt ? "Alt" : undefined,
+    shortcut.shift ? "⇧" : undefined,
+    shortcut.key.toUpperCase(),
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function renderActiveState(ui: UiElements, active: boolean, message?: string): void {

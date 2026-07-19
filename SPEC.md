@@ -15,7 +15,7 @@ Out of scope: autonomous code editing, an MCP/relay daemon, screenshots, product
 | ID    | Requirement                                                                                                                                                                                                                                                                                       |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R-001 | The Vite adapter instruments Vue source locations during `vite serve` and injects no browser runtime during production builds.                                                                                                                                                                    |
-| R-002 | A developer can start or stop selection with a visible button, `Alt+Shift+C`, or Escape.                                                                                                                                                                                                          |
+| R-002 | A developer can start or stop selection with a visible button, `Ctrl+C`, or Escape. Native copy keeps precedence while editing a field or copying selected text.                                                                                                                                  |
 | R-003 | Hovering an instrumented element shows its exact bounds and source file, line, and column without changing the application DOM or behavior.                                                                                                                                                       |
 | R-004 | Clicking a selected element copies deterministic Markdown containing route path, viewport, color-scheme preference, source trace, component/source ancestry, sanitized HTML, bounds, and an allowlisted computed-style summary.                                                                   |
 | R-005 | Capture never includes URL query/hash data, cookies, browser storage, Vue state, Inertia props, form-control values, inline event handlers, hidden source-inspector attributes, or arbitrary `data-*` attributes. Common secrets and personal identifiers in copied text/attributes are redacted. |
@@ -32,7 +32,7 @@ Given the package is configured in a Vite application, when Vite runs a developm
 
 ### AC-002 — selection flow
 
-Given the client is installed, when the developer activates it from the button or `Alt+Shift+C`, hovers an instrumented element, and clicks, then application click handling is suppressed, a source-aware context payload is copied, success is announced, and selection mode exits. Escape exits without copying.
+Given the client is installed, when the developer activates it from the button or `Ctrl+C`, hovers an instrumented element, and clicks, then application click handling is suppressed, a source-aware context payload is copied, success is announced, and selection mode exits. Escape exits without copying. When a form field is focused or page text is selected, `Ctrl+C` retains its native copy behavior.
 
 ### AC-003 — safe payload
 

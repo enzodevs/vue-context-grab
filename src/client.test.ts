@@ -56,13 +56,48 @@ describe("installVueContextGrab", () => {
     expect(button.getAttribute("aria-pressed")).toBe("false");
 
     document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "c", altKey: true, shiftKey: true, bubbles: true }),
+      new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true }),
     );
     expect(inspector.isEnabled.value).toBe(true);
 
     controller.dispose();
     expect(document.querySelector("[data-vue-context-grab]")).toBeNull();
     expect(inspector.isEnabled.value).toBe(false);
+  });
+
+  it("preserves native Ctrl+C when editing or copying selected text", () => {
+    const controller = installVueContextGrab();
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.focus();
+
+    const editingCopy = new KeyboardEvent("keydown", {
+      key: "c",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(editingCopy);
+
+    expect(controller.active).toBe(false);
+    expect(editingCopy.defaultPrevented).toBe(false);
+
+    input.blur();
+    const paragraph = document.createElement("p");
+    paragraph.textContent = "Selected text";
+    document.body.append(paragraph);
+    const selection = window.getSelection()!;
+    selection.selectAllChildren(paragraph);
+    const selectedCopy = new KeyboardEvent("keydown", {
+      key: "c",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(selectedCopy);
+
+    expect(controller.active).toBe(false);
+    expect(selectedCopy.defaultPrevented).toBe(false);
   });
 
   it("is idempotent", () => {
@@ -123,11 +158,13 @@ describe("installVueContextGrab", () => {
     const controller = installVueContextGrab();
     const host = document.querySelector("[data-vue-context-grab]");
     const styles = host?.shadowRoot?.querySelector("style")?.textContent ?? "";
+    const shortcut = host?.shadowRoot?.querySelector("kbd")?.textContent;
 
     expect(styles).toContain(":focus-visible");
     expect(styles).toContain("@media (forced-colors: active)");
     expect(styles).toContain("@media (prefers-reduced-motion: reduce)");
     expect(styles).not.toContain("transition: all");
+    expect(shortcut).toBe("Ctrl C");
 
     controller.dispose();
   });

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "vue-context-grab",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Select a Vue UI element in development and copy safe, source-aware context for an AI coding assistant.",
   "license": "MIT",
   "files": [
