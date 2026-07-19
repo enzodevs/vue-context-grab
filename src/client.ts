@@ -82,6 +82,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
 
   const setActive = (active: boolean, message?: string): void => {
     clearCopiedFeedback();
+    if (active) renderMinimizedState(ui, false);
     if (!active) {
       currentInfo = undefined;
       verticalHistory = [];
@@ -91,6 +92,11 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
   };
 
   const onButtonClick = (): void => setActive(!isEnabled.value);
+  const onMinimizeClick = (): void => {
+    const shouldMinimize = !ui.host.hasAttribute("data-minimized");
+    if (shouldMinimize) setActive(false);
+    renderMinimizedState(ui, shouldMinimize);
+  };
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === "Escape" && isEnabled.value) {
       event.preventDefault();
@@ -155,6 +161,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
   }
 
   ui.button.addEventListener("click", onButtonClick);
+  ui.minimizeButton.addEventListener("click", onMinimizeClick);
   document.addEventListener("keydown", onKeyDown);
   document.body.append(ui.host);
 
@@ -167,6 +174,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
       disposed = true;
       setActive(false);
       ui.button.removeEventListener("click", onButtonClick);
+      ui.minimizeButton.removeEventListener("click", onMinimizeClick);
       document.removeEventListener("keydown", onKeyDown);
       clearCopiedFeedback();
       for (const stopListening of unsubscribe) stopListening();
@@ -402,6 +410,7 @@ async function copyText(text: string): Promise<void> {
 interface UiElements {
   host: HTMLElement;
   button: HTMLButtonElement;
+  minimizeButton: HTMLButtonElement;
   highlight: HTMLElement;
   label: HTMLElement;
   source: HTMLElement;
@@ -419,11 +428,16 @@ function createUi(position: string, shortcut: ShortcutOptions | false): UiElemen
   const root = document.createElement("div");
   root.className = `root ${position}`;
   root.innerHTML = `
-    <button type="button" aria-pressed="false" aria-label="Select Vue UI to copy context">
-      <span class="target" aria-hidden="true">&lt;/&gt;</span>
-      <span class="button-label">Pick UI</span>
-      <kbd></kbd>
-    </button>
+    <div class="toolbar">
+      <button class="picker" type="button" aria-pressed="false" aria-label="Select Vue UI to copy context">
+        <span class="target" aria-hidden="true">&lt;/&gt;</span>
+        <span class="button-label">Pick UI</span>
+        <kbd></kbd>
+      </button>
+      <button class="minimize" type="button" aria-label="Minimize Vue picker" aria-expanded="true" title="Minimize Vue picker">
+        <span class="minimize-icon" aria-hidden="true"></span>
+      </button>
+    </div>
     <div class="highlight" aria-hidden="true">
       <span class="label"><span class="tag"></span><span class="source"></span></span>
     </div>
@@ -436,7 +450,8 @@ function createUi(position: string, shortcut: ShortcutOptions | false): UiElemen
 
   return {
     host,
-    button: root.querySelector("button")!,
+    button: root.querySelector<HTMLButtonElement>(".picker")!,
+    minimizeButton: root.querySelector<HTMLButtonElement>(".minimize")!,
     highlight: root.querySelector<HTMLElement>(".highlight")!,
     label: root.querySelector<HTMLElement>(".label")!,
     source: root.querySelector<HTMLElement>(".source")!,
@@ -467,6 +482,18 @@ function renderActiveState(ui: UiElements, active: boolean, message?: string): v
       ? "Selection active. Hover an element, use arrows to navigate, then click or press Enter to copy."
       : "Selection inactive.");
   if (!active) ui.highlight.style.display = "none";
+}
+
+function renderMinimizedState(ui: UiElements, minimized: boolean): void {
+  ui.host.toggleAttribute("data-minimized", minimized);
+  ui.minimizeButton.setAttribute("aria-expanded", String(!minimized));
+  const label = minimized ? "Expand Vue picker" : "Minimize Vue picker";
+  ui.minimizeButton.setAttribute("aria-label", label);
+  ui.minimizeButton.title = label;
+  if (minimized) {
+    ui.highlight.style.display = "none";
+    ui.status.textContent = "Vue picker minimized.";
+  }
 }
 
 function renderCopiedState(ui: UiElements, message: string): void {
@@ -503,20 +530,24 @@ const UI_CSS = `
   :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; color-scheme: dark; }
   *, *::before, *::after { box-sizing: border-box; }
   .root { --accent: #67e8f9; --ink: #f8fafc; --surface: #09090b; --success: #86efac; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
-  button { position: fixed; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 7px 10px; border: 1px solid #3f3f46; border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--ink); box-shadow: 0 12px 32px rgb(0 0 0 / 35%); font: 600 12px/1.2 inherit; letter-spacing: .01em; cursor: pointer; pointer-events: auto; backdrop-filter: blur(10px); transition: transform 150ms cubic-bezier(.22, 1, .36, 1), border-color 150ms ease-out, background-color 150ms ease-out; }
+  .toolbar { position: fixed; display: inline-flex; align-items: stretch; gap: 4px; pointer-events: none; }
+  button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 7px 10px; border: 1px solid #3f3f46; border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--ink); box-shadow: 0 12px 32px rgb(0 0 0 / 35%); font: 600 12px/1.2 inherit; letter-spacing: .01em; cursor: pointer; pointer-events: auto; backdrop-filter: blur(10px); transition: transform 150ms cubic-bezier(.22, 1, .36, 1), border-color 150ms ease-out, background-color 150ms ease-out, max-width 180ms cubic-bezier(.22, 1, .36, 1), padding 180ms cubic-bezier(.22, 1, .36, 1), opacity 120ms ease-out; }
   button:hover { border-color: #71717a; transform: translateY(-1px); }
   button:active { transform: scale(.97); }
   button:focus { outline: none; }
   button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-  :host([data-active]) button { border-color: var(--accent); background: #164e63; }
-  :host([data-copied]) button { border-color: var(--success); background: #14532d; }
-  .bottom-left button { left: 16px; bottom: 16px; }
-  .bottom-center button { left: 50%; bottom: 16px; transform: translateX(-50%); }
-  .bottom-center button:hover { transform: translateX(-50%) translateY(-1px); }
-  .bottom-center button:active { transform: translateX(-50%) scale(.97); }
-  .bottom-right button { right: 16px; bottom: 16px; }
-  .top-left button { left: 16px; top: 16px; }
-  .top-right button { right: 16px; top: 16px; }
+  :host([data-active]) .picker { border-color: var(--accent); background: #164e63; }
+  :host([data-copied]) .picker { border-color: var(--success); background: #14532d; }
+  .bottom-left .toolbar { left: 16px; bottom: 16px; }
+  .bottom-center .toolbar { left: 50%; bottom: 16px; transform: translateX(-50%); }
+  .bottom-right .toolbar { right: 16px; bottom: 16px; }
+  .top-left .toolbar { left: 16px; top: 16px; }
+  .top-right .toolbar { right: 16px; top: 16px; }
+  .picker { max-width: 240px; overflow: hidden; white-space: nowrap; }
+  .minimize { width: 30px; padding: 7px; gap: 0; }
+  .minimize-icon { width: 9px; height: 9px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 180ms cubic-bezier(.22, 1, .36, 1); }
+  :host([data-minimized]) .picker { max-width: 0; min-width: 0; padding-inline: 0; border-inline-width: 0; opacity: 0; pointer-events: none; transform: none; }
+  :host([data-minimized]) .minimize-icon { transform: translateY(2px) rotate(225deg); }
   .target { position: relative; display: inline-flex; width: 22px; height: 18px; flex: 0 0 auto; align-items: center; justify-content: center; border: 1px solid #52525b; border-radius: 5px; color: var(--accent); font: 700 10px/1 ui-monospace, monospace; box-shadow: 2px 2px 0 #27272a; transition: transform 180ms cubic-bezier(.175, .885, .32, 1.275), width 180ms ease-out, border-radius 180ms ease-out, background-color 180ms ease-out, box-shadow 180ms ease-out; }
   .target::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 9px; border: solid #052e16; border-width: 0 2px 2px 0; border-radius: 1px; opacity: 0; transform: scale(0) rotate(42deg); }
   :host([data-copied]) .target { width: 18px; color: transparent; background: var(--success); border-color: var(--success); border-radius: 58% 42% 55% 45% / 46% 58% 42% 54%; box-shadow: 2px 2px 0 #052e16; animation: copied-pop 320ms cubic-bezier(.175, .885, .32, 1.275) both; }
@@ -529,7 +560,7 @@ const UI_CSS = `
   .sr-status { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   @keyframes copied-pop { 0% { transform: scale(.72) rotate(-5deg); } 70% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1) rotate(0); } }
   @keyframes copied-check { 0% { opacity: 0; transform: scale(0) rotate(42deg); } 70% { opacity: 1; transform: scale(1.2) rotate(42deg); } 100% { opacity: 1; transform: scale(1) rotate(42deg); } }
-  @media (max-width: 520px) { button { max-width: calc(100vw - 24px); } kbd { display: none; } .label { gap: 5px; max-width: calc(100vw - 24px); } .source { max-width: 58vw; } .bottom-left button, .top-left button { left: 12px; } .bottom-right button, .top-right button { right: 12px; } .bottom-center button { bottom: 12px; } }
+  @media (max-width: 520px) { .picker { max-width: calc(100vw - 58px); } kbd { display: none; } .label { gap: 5px; max-width: calc(100vw - 24px); } .source { max-width: 58vw; } .bottom-left .toolbar, .top-left .toolbar { left: 12px; } .bottom-right .toolbar, .top-right .toolbar { right: 12px; } .bottom-center .toolbar { bottom: 12px; } }
   @media (forced-colors: active) { button, .highlight, .label { border: 2px solid ButtonText; forced-color-adjust: auto; } }
   @media (prefers-reduced-motion: reduce) { button, .target, .highlight { animation: none !important; transition: none !important; } }
 `;

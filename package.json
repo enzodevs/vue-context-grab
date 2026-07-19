@@ -1,9 +1,26 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "vue-context-grab",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Select a Vue UI element in development and copy safe, source-aware context for an AI coding assistant.",
+  "keywords": [
+    "ai",
+    "clipboard",
+    "developer-tools",
+    "source-inspector",
+    "vite",
+    "vue"
+  ],
+  "homepage": "https://github.com/enzodevs/vue-context-grab#readme",
+  "bugs": {
+    "url": "https://github.com/enzodevs/vue-context-grab/issues"
+  },
   "license": "MIT",
+  "author": "enzodevs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/enzodevs/vue-context-grab.git"
+  },
   "files": [
     "dist",
     "README.md",
@@ -34,6 +51,7 @@
     "lint": "oxlint --type-aware",
     "lint:fix": "oxlint --type-aware --fix",
     "package:check": "publint",
+    "prepare": "bun run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "types:check": "tsc --noEmit"

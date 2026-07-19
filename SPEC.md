@@ -1,4 +1,4 @@
-# Vue Context Grab v0.1 specification
+# Vue Context Grab v0.3 specification
 
 ## Problem
 
@@ -25,6 +25,7 @@ Out of scope: autonomous code editing, an MCP/relay daemon, screenshots, product
 | R-009 | Rendered text is labeled as untrusted UI data and cannot terminate its Markdown code fence, reducing prompt-injection ambiguity when a developer pastes the payload into an assistant.                                                                                                            |
 | R-010 | The picker identifies highlighted DOM elements with an XML-style tag and source path, adapts its compact controls to narrow viewports, and shows a brief check-mark confirmation after clipboard success without delaying deactivation.                                                           |
 | R-011 | Hosts can place the picker at the bottom center as well as the four viewport corners, with centering preserved across responsive viewport widths.                                                                                                                                                 |
+| R-012 | A developer can minimize the idle picker to a compact edge control and restore it with the same control. Activating selection from the keyboard restores the full picker, and the toggle exposes its state to assistive technology.                                                               |
 
 ## Acceptance criteria
 
@@ -113,6 +114,7 @@ The adapter accepts optional `appendTo`, `shortcut`, `buttonPosition`, `projectR
 - [x] T-007 Add source-aware arrow navigation with parent/child history, sibling traversal, and Enter-to-copy.
 - [x] T-008 Add responsive XML-tag selection labels and accessible copied-state feedback.
 - [x] T-009 Add and verify a responsive bottom-center picker position.
+- [x] T-010 Add an accessible minimize/restore interaction with keyboard activation recovery.
 
 ## Deferred decisions
 

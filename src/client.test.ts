@@ -146,7 +146,29 @@ describe("installVueContextGrab", () => {
     const styles = host.shadowRoot!.querySelector("style")!.textContent;
 
     expect(root.classList).toContain("bottom-center");
-    expect(styles).toContain(".bottom-center button");
+    expect(styles).toContain(".bottom-center .toolbar");
+
+    controller.dispose();
+  });
+
+  it("minimizes to an accessible edge control and expands on activation", () => {
+    const controller = installVueContextGrab({ buttonPosition: "bottom-center" });
+    const host = document.querySelector("[data-vue-context-grab]")!;
+    const minimizeButton = host.shadowRoot!.querySelector<HTMLButtonElement>(
+      '[aria-label="Minimize Vue picker"]',
+    )!;
+
+    minimizeButton.click();
+    expect(host.hasAttribute("data-minimized")).toBe(true);
+    expect(minimizeButton.getAttribute("aria-expanded")).toBe("false");
+    expect(minimizeButton.getAttribute("aria-label")).toBe("Expand Vue picker");
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true }),
+    );
+    expect(controller.active).toBe(true);
+    expect(host.hasAttribute("data-minimized")).toBe(false);
+    expect(minimizeButton.getAttribute("aria-expanded")).toBe("true");
 
     controller.dispose();
   });
