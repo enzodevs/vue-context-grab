@@ -15,14 +15,15 @@ Out of scope: autonomous code editing, an MCP/relay daemon, screenshots, product
 | ID    | Requirement                                                                                                                                                                                                                                                                                       |
 | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R-001 | The Vite adapter instruments Vue source locations during `vite serve` and injects no browser runtime during production builds.                                                                                                                                                                    |
-| R-002 | A developer can start or stop selection with a visible button, `Ctrl+C`, or Escape. Native copy keeps precedence while editing a field or copying selected text.                                                                                                                                  |
-| R-003 | Hovering an instrumented element shows its exact bounds and source file, line, and column without changing the application DOM or behavior.                                                                                                                                                       |
+| R-002 | A developer can start or stop selection with a visible button, `Ctrl+C`, or Escape. Native copy keeps precedence while editing a field or copying selected text. Arrow keys navigate the active Vue selection and Enter copies it.                                                                |
+| R-003 | Hovering an instrumented element shows its exact bounds and source file, line, and column without changing the application DOM or behavior. `↑` selects a source-aware parent, `↓` retraces toward the prior child, and `←`/`→` select visible source-aware DOM siblings.                         |
 | R-004 | Clicking a selected element copies deterministic Markdown containing route path, viewport, color-scheme preference, source trace, component/source ancestry, sanitized HTML, bounds, and an allowlisted computed-style summary.                                                                   |
 | R-005 | Capture never includes URL query/hash data, cookies, browser storage, Vue state, Inertia props, form-control values, inline event handlers, hidden source-inspector attributes, or arbitrary `data-*` attributes. Common secrets and personal identifiers in copied text/attributes are redacted. |
 | R-006 | The tool provides a visible `:focus-visible` indicator, keyboard-equivalent operation, polite live feedback, non-color selection cues, high-contrast-compatible borders, and a reduced-motion mode.                                                                                               |
 | R-007 | Calling installation more than once is idempotent, and disposal removes all tool-owned listeners and DOM.                                                                                                                                                                                         |
 | R-008 | The package uses Bun, TypeScript strict mode, Oxc lint/format, Vitest, tsdown, and publint.                                                                                                                                                                                                       |
 | R-009 | Rendered text is labeled as untrusted UI data and cannot terminate its Markdown code fence, reducing prompt-injection ambiguity when a developer pastes the payload into an assistant.                                                                                                            |
+| R-010 | The picker identifies highlighted DOM elements with an XML-style tag and source path, adapts its compact controls to narrow viewports, and shows a brief check-mark confirmation after clipboard success without delaying deactivation.                                                           |
 
 ## Acceptance criteria
 
@@ -32,7 +33,7 @@ Given the package is configured in a Vite application, when Vite runs a developm
 
 ### AC-002 — selection flow
 
-Given the client is installed, when the developer activates it from the button or `Ctrl+C`, hovers an instrumented element, and clicks, then application click handling is suppressed, a source-aware context payload is copied, success is announced, and selection mode exits. Escape exits without copying. When a form field is focused or page text is selected, `Ctrl+C` retains its native copy behavior.
+Given the client is installed, when the developer activates it from the button or `Ctrl+C`, hovers an instrumented element, and clicks, then application click handling is suppressed, a source-aware context payload is copied, success is announced, and selection mode exits. While a source-aware element is highlighted, arrow keys navigate its parent/child history and visible siblings; Enter copies the keyboard-selected element. Escape exits without copying. When a form field is focused or page text is selected, native editing behavior retains precedence.
 
 ### AC-003 — safe payload
 
@@ -47,6 +48,8 @@ Given the same element, source trace, viewport, and computed style values, when 
 ### AC-005 — accessible overlay
 
 Given keyboard navigation or reduced-motion/high-contrast preferences, when the tool is used, then its button remains operable and visibly focused, status changes are announced, selection is conveyed by an outline plus label, and motion is disabled under reduced motion.
+
+The selection label pairs an XML-style element tag with the Vue source location. After a successful copy, the control briefly changes to a visible check-mark and “Copied” state; narrow viewports preserve the primary action without allowing shortcut or source text to overflow.
 
 ## Architecture
 
@@ -90,13 +93,13 @@ The adapter accepts optional `appendTo`, `shortcut`, `buttonPosition`, `projectR
 
 ## Test map
 
-| Acceptance criterion | Test level           | Evidence                                                 |
-| -------------------- | -------------------- | -------------------------------------------------------- |
-| AC-001               | Unit/plugin contract | serve/build application and entry-transform tests        |
-| AC-002               | DOM integration      | activation, hover/click, copy, Escape, suppression tests |
-| AC-003               | Unit                 | adversarial sanitizer and redactor cases                 |
-| AC-004               | Unit                 | deterministic output and length/ancestry limits          |
-| AC-005               | DOM integration      | semantic controls, live region, CSS preference guards    |
+| Acceptance criterion | Test level           | Evidence                                                        |
+| -------------------- | -------------------- | --------------------------------------------------------------- |
+| AC-001               | Unit/plugin contract | serve/build application and entry-transform tests               |
+| AC-002               | DOM integration      | activation, hover/click, arrow/Enter, Escape, suppression tests |
+| AC-003               | Unit                 | adversarial sanitizer and redactor cases                        |
+| AC-004               | Unit                 | deterministic output and length/ancestry limits                 |
+| AC-005               | DOM integration      | semantic controls, live region, CSS preference guards           |
 
 ## Tasks
 
@@ -106,6 +109,8 @@ The adapter accepts optional `appendTo`, `shortcut`, `buttonPosition`, `projectR
 - [x] T-004 Build and test the dev-only Vite adapter for R-001.
 - [x] T-005 Document installation and privacy behavior; validate build artifacts for R-008.
 - [x] T-006 Install a packed release in the Reda Pro host and verify lint, types, unit tests, production build, and codebase health.
+- [x] T-007 Add source-aware arrow navigation with parent/child history, sibling traversal, and Enter-to-copy.
+- [x] T-008 Add responsive XML-tag selection labels and accessible copied-state feedback.
 
 ## Deferred decisions
 

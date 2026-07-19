@@ -9,7 +9,7 @@ The tool is local and explicit: it writes only to the clipboard after a selectio
 Until the package has a registry or Git remote, install a reviewed packed release:
 
 ```sh
-bun add -d ./vue-context-grab-0.1.1.tgz
+bun add -d ./vue-context-grab-0.2.2.tgz
 ```
 
 After publication, the intended registry command is `bun add -d vue-context-grab`.
@@ -33,8 +33,11 @@ export default defineConfig({
 ## Use
 
 - Choose **Pick UI** or press `Ctrl+C` when no form field or text selection is active. Native copy remains unchanged while editing or copying selected text.
-- Hover a Vue element to confirm its source and bounds.
+- Hover a Vue element to confirm its XML-style element tag, Vue source, and bounds.
+- Use `↑` to move to a parent, `↓` to return toward the prior child, and `←`/`→` to move between visible siblings.
+- Press Enter to copy the keyboard-selected element.
 - Click to copy context and exit selection mode.
+- A brief **Copied** check confirms clipboard success; the control then returns to its compact idle state.
 - Press Escape to cancel.
 
 The Markdown payload includes the pathname, viewport, preferred color scheme, source trace and ancestry, sanitized HTML, bounds, and an allowlisted computed-style summary. Paste it into your coding assistant and add the requested visual change.

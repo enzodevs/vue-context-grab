@@ -1,5 +1,10 @@
 import type { ElementTraceInfo } from "vite-plugin-vue-inspector/client/record";
-import { events, isEnabled } from "vite-plugin-vue-inspector/client/listeners";
+import {
+  events,
+  findTraceAtPointer,
+  findTraceFromElement,
+  isEnabled,
+} from "vite-plugin-vue-inspector/client/listeners";
 import { formatSelectionContext } from "./formatter";
 import { resolveClientOptions } from "./options";
 import type {
@@ -52,14 +57,38 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
 
   const resolved = resolveClientOptions(options);
   const ui = createUi(resolved.buttonPosition, resolved.shortcut);
+  let currentInfo: ElementTraceInfo | undefined;
+  let isKeyboardSelection = false;
+  let verticalHistory: ElementTraceInfo[] = [];
+  let copiedFeedbackTimer: number | undefined;
   const unsubscribe = [
-    events.on("hover", (info) => renderHighlight(ui, info)),
+    events.on("hover", (info) => {
+      currentInfo = info;
+      isKeyboardSelection = false;
+      verticalHistory = [];
+      renderHighlight(ui, info);
+    }),
     events.on("click", (info) => void captureSelection(info)),
     events.on("enabled", () => renderActiveState(ui, true)),
     events.on("disabled", () => renderActiveState(ui, false)),
   ];
 
+  const clearCopiedFeedback = (): void => {
+    if (copiedFeedbackTimer !== undefined) {
+      window.clearTimeout(copiedFeedbackTimer);
+      copiedFeedbackTimer = undefined;
+    }
+    ui.host.removeAttribute("data-copied");
+    if (!isEnabled.value) ui.button.querySelector(".button-label")!.textContent = "Pick UI";
+  };
+
   const setActive = (active: boolean, message?: string): void => {
+    clearCopiedFeedback();
+    if (!active) {
+      currentInfo = undefined;
+      isKeyboardSelection = false;
+      verticalHistory = [];
+    }
     isEnabled.value = active;
     renderActiveState(ui, active, message);
   };
@@ -70,6 +99,40 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
       event.preventDefault();
       setActive(false, "Selection cancelled.");
       return;
+    }
+
+    if (isEnabled.value && !shouldPreserveNavigation(event)) {
+      if (event.key === "Enter" && isKeyboardSelection && currentInfo) {
+        event.preventDefault();
+        event.stopPropagation();
+        void captureSelection(currentInfo);
+        return;
+      }
+
+      if (isArrowKey(event.key)) {
+        const initialInfo =
+          currentInfo ??
+          findTraceAtPointer({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+        if (!initialInfo) return;
+
+        const nextInfo = findNavigationTarget(event.key, initialInfo, verticalHistory);
+        if (!nextInfo) return;
+
+        if (event.key === "ArrowUp") {
+          verticalHistory.push(initialInfo);
+          verticalHistory = verticalHistory.slice(-50);
+        } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          verticalHistory = [];
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        currentInfo = nextInfo;
+        isKeyboardSelection = true;
+        renderHighlight(ui, nextInfo);
+        ui.status.textContent = `Selected ${nextInfo.fullpath}. Use arrows to navigate or Enter to copy.`;
+        return;
+      }
     }
 
     if (!event.repeat && resolved.shortcut !== false && matchesShortcut(event, resolved.shortcut)) {
@@ -86,7 +149,10 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
       const snapshot = createSnapshot(info);
       const markdown = formatSelectionContext(snapshot, resolved);
       await copyText(markdown);
-      setActive(false, `Copied ${info.fullpath} to the clipboard.`);
+      const message = `Copied ${info.fullpath} to the clipboard.`;
+      setActive(false, message);
+      renderCopiedState(ui, message);
+      copiedFeedbackTimer = window.setTimeout(clearCopiedFeedback, 1_600);
     } catch {
       setActive(false, "Could not copy UI context. Check clipboard permissions and try again.");
     }
@@ -106,6 +172,7 @@ export function installVueContextGrab(options: ClientOptions = {}): VueContextGr
       setActive(false);
       ui.button.removeEventListener("click", onButtonClick);
       document.removeEventListener("keydown", onKeyDown);
+      clearCopiedFeedback();
       for (const stopListening of unsubscribe) stopListening();
       ui.host.remove();
       delete controllerGlobal[CONTROLLER_KEY];
@@ -215,6 +282,109 @@ function shouldPreserveNativeCopy(): boolean {
   return Boolean(window.getSelection()?.toString());
 }
 
+const ARROW_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+function isArrowKey(key: string): key is "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight" {
+  return ARROW_KEYS.has(key);
+}
+
+function shouldPreserveNavigation(event: KeyboardEvent): boolean {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return true;
+
+  const activeElement = document.activeElement;
+  return (
+    activeElement instanceof HTMLInputElement ||
+    activeElement instanceof HTMLTextAreaElement ||
+    (activeElement instanceof HTMLElement && activeElement.isContentEditable)
+  );
+}
+
+function findNavigationTarget(
+  key: "ArrowUp" | "ArrowDown" | "ArrowLeft" | "ArrowRight",
+  currentInfo: ElementTraceInfo,
+  verticalHistory: ElementTraceInfo[],
+): ElementTraceInfo | undefined {
+  if (key === "ArrowDown") {
+    while (verticalHistory.length > 0) {
+      const previousInfo = verticalHistory.pop();
+      if (previousInfo && isNavigableTrace(previousInfo)) return previousInfo;
+    }
+
+    return findNestedTrace(currentInfo);
+  }
+
+  if (key === "ArrowUp") {
+    const visited = new Set<Element>();
+    if (currentInfo.el) visited.add(currentInfo.el);
+    let parentInfo = currentInfo.getParent();
+    let remainingDepth = 50;
+
+    while (parentInfo && remainingDepth > 0) {
+      remainingDepth -= 1;
+      if (parentInfo.el && !visited.has(parentInfo.el) && isNavigableTrace(parentInfo)) {
+        return parentInfo;
+      }
+      if (parentInfo.el) visited.add(parentInfo.el);
+      parentInfo = parentInfo.getParent();
+    }
+
+    let parentElement = currentInfo.el?.parentElement;
+    while (parentElement) {
+      const domParentInfo = findTraceFromElement(parentElement);
+      if (domParentInfo && isNavigableTrace(domParentInfo)) return domParentInfo;
+      parentElement = parentElement.parentElement;
+    }
+
+    return undefined;
+  }
+
+  let sibling =
+    key === "ArrowRight"
+      ? currentInfo.el?.nextElementSibling
+      : currentInfo.el?.previousElementSibling;
+  while (sibling) {
+    const siblingInfo = findTraceFromElement(sibling);
+    if (siblingInfo && isNavigableTrace(siblingInfo)) return siblingInfo;
+    sibling = key === "ArrowRight" ? sibling.nextElementSibling : sibling.previousElementSibling;
+  }
+
+  return undefined;
+}
+
+function findNestedTrace(currentInfo: ElementTraceInfo): ElementTraceInfo | undefined {
+  const element = currentInfo.el;
+  const rect = currentInfo.rect;
+  if (!element || !rect || typeof document.elementsFromPoint !== "function") return undefined;
+
+  const candidates = document.elementsFromPoint(
+    rect.left + rect.width / 2,
+    rect.top + rect.height / 2,
+  );
+  const currentIndex = candidates.indexOf(element);
+  if (currentIndex <= 0) return undefined;
+
+  for (let index = currentIndex - 1; index >= 0; index -= 1) {
+    const candidate = candidates[index];
+    if (!candidate || !element.contains(candidate)) continue;
+    const candidateInfo = findTraceFromElement(candidate);
+    if (candidateInfo && isNavigableTrace(candidateInfo)) return candidateInfo;
+  }
+
+  return undefined;
+}
+
+function isNavigableTrace(info: ElementTraceInfo): boolean {
+  const element = info.el;
+  const rect = info.rect;
+  return Boolean(
+    element?.isConnected &&
+    !element.closest("[data-v-inspector-ignore]") &&
+    rect &&
+    rect.width > 0 &&
+    rect.height > 0,
+  );
+}
+
 async function copyText(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -238,6 +408,8 @@ interface UiElements {
   button: HTMLButtonElement;
   highlight: HTMLElement;
   label: HTMLElement;
+  source: HTMLElement;
+  tag: HTMLElement;
   status: HTMLElement;
 }
 
@@ -252,11 +424,13 @@ function createUi(position: string, shortcut: ShortcutOptions | false): UiElemen
   root.className = `root ${position}`;
   root.innerHTML = `
     <button type="button" aria-pressed="false" aria-label="Select Vue UI to copy context">
-      <span class="target" aria-hidden="true"></span>
+      <span class="target" aria-hidden="true">&lt;/&gt;</span>
       <span class="button-label">Pick UI</span>
       <kbd></kbd>
     </button>
-    <div class="highlight" aria-hidden="true"><span class="label"></span></div>
+    <div class="highlight" aria-hidden="true">
+      <span class="label"><span class="tag"></span><span class="source"></span></span>
+    </div>
     <span class="sr-status" aria-live="polite"></span>
   `;
   shadow.append(style, root);
@@ -269,6 +443,8 @@ function createUi(position: string, shortcut: ShortcutOptions | false): UiElemen
     button: root.querySelector("button")!,
     highlight: root.querySelector<HTMLElement>(".highlight")!,
     label: root.querySelector<HTMLElement>(".label")!,
+    source: root.querySelector<HTMLElement>(".source")!,
+    tag: root.querySelector<HTMLElement>(".tag")!,
     status: root.querySelector<HTMLElement>(".sr-status")!,
   };
 }
@@ -291,8 +467,16 @@ function renderActiveState(ui: UiElements, active: boolean, message?: string): v
   ui.button.querySelector(".button-label")!.textContent = active ? "Click an element" : "Pick UI";
   ui.status.textContent =
     message ??
-    (active ? "Selection active. Click an element or press Escape." : "Selection inactive.");
+    (active
+      ? "Selection active. Hover an element, use arrows to navigate, then click or press Enter to copy."
+      : "Selection inactive.");
   if (!active) ui.highlight.style.display = "none";
+}
+
+function renderCopiedState(ui: UiElements, message: string): void {
+  ui.host.setAttribute("data-copied", "");
+  ui.button.querySelector(".button-label")!.textContent = "Copied";
+  ui.status.textContent = message;
 }
 
 function renderHighlight(ui: UiElements, info: ElementTraceInfo | undefined): void {
@@ -306,7 +490,8 @@ function renderHighlight(ui: UiElements, info: ElementTraceInfo | undefined): vo
   ui.highlight.style.transform = `translate3d(${rect.x}px, ${rect.y}px, 0)`;
   ui.highlight.style.width = `${rect.width}px`;
   ui.highlight.style.height = `${rect.height}px`;
-  ui.label.textContent = info.fullpath;
+  ui.tag.textContent = `<${info.el?.localName ?? "vue"}>`;
+  ui.source.textContent = info.fullpath;
 }
 
 function createServerController(): VueContextGrabController {
@@ -321,22 +506,31 @@ function createServerController(): VueContextGrabController {
 const UI_CSS = `
   :host { all: initial; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; color-scheme: dark; }
   *, *::before, *::after { box-sizing: border-box; }
-  .root { --accent: #67e8f9; --ink: #f8fafc; --surface: #09090b; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  .root { --accent: #67e8f9; --ink: #f8fafc; --surface: #09090b; --success: #86efac; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   button { position: fixed; display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 7px 10px; border: 1px solid #3f3f46; border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--ink); box-shadow: 0 12px 32px rgb(0 0 0 / 35%); font: 600 12px/1.2 inherit; letter-spacing: .01em; cursor: pointer; pointer-events: auto; backdrop-filter: blur(10px); transition: transform 150ms cubic-bezier(.22, 1, .36, 1), border-color 150ms ease-out, background-color 150ms ease-out; }
   button:hover { border-color: #71717a; transform: translateY(-1px); }
   button:active { transform: scale(.97); }
   button:focus { outline: none; }
   button:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
   :host([data-active]) button { border-color: var(--accent); background: #164e63; }
+  :host([data-copied]) button { border-color: var(--success); background: #14532d; }
   .bottom-left button { left: 16px; bottom: 16px; }
   .bottom-right button { right: 16px; bottom: 16px; }
   .top-left button { left: 16px; top: 16px; }
   .top-right button { right: 16px; top: 16px; }
-  .target { width: 13px; height: 13px; border: 2px solid currentColor; border-radius: 3px; box-shadow: inset 0 0 0 2px var(--surface); }
+  .target { position: relative; display: inline-flex; width: 22px; height: 18px; flex: 0 0 auto; align-items: center; justify-content: center; border: 1px solid #52525b; border-radius: 5px; color: var(--accent); font: 700 10px/1 ui-monospace, monospace; box-shadow: 2px 2px 0 #27272a; transition: transform 180ms cubic-bezier(.175, .885, .32, 1.275), width 180ms ease-out, border-radius 180ms ease-out, background-color 180ms ease-out, box-shadow 180ms ease-out; }
+  .target::after { content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 9px; border: solid #052e16; border-width: 0 2px 2px 0; border-radius: 1px; opacity: 0; transform: scale(0) rotate(42deg); }
+  :host([data-copied]) .target { width: 18px; color: transparent; background: var(--success); border-color: var(--success); border-radius: 58% 42% 55% 45% / 46% 58% 42% 54%; box-shadow: 2px 2px 0 #052e16; animation: copied-pop 320ms cubic-bezier(.175, .885, .32, 1.275) both; }
+  :host([data-copied]) .target::after { opacity: 1; animation: copied-check 300ms cubic-bezier(.175, .885, .32, 1.275) both; }
   kbd { padding: 2px 5px; border: 1px solid #52525b; border-bottom-width: 2px; border-radius: 5px; color: #d4d4d8; font: 500 10px/1.2 ui-monospace, monospace; }
   .highlight { display: none; position: fixed; left: 0; top: 0; border: 2px solid var(--accent); outline: 1px solid #083344; outline-offset: 1px; background: rgb(103 232 249 / 10%); box-shadow: 0 0 0 9999px rgb(3 7 18 / 5%); pointer-events: none; transition: transform 80ms ease-out, width 80ms ease-out, height 80ms ease-out; }
-  .label { position: absolute; left: -2px; bottom: calc(100% + 6px); max-width: min(560px, 90vw); overflow: hidden; padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); font: 600 11px/1.2 ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }
+  .label { position: absolute; left: -2px; bottom: calc(100% + 6px); display: inline-flex; align-items: center; gap: 7px; max-width: min(560px, calc(100vw - 24px)); overflow: hidden; padding: 5px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); font: 600 11px/1.2 ui-monospace, monospace; white-space: nowrap; }
+  .tag { flex: 0 0 auto; color: var(--accent); }
+  .source { min-width: 0; overflow: hidden; color: #d4d4d8; text-overflow: ellipsis; }
   .sr-status { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @keyframes copied-pop { 0% { transform: scale(.72) rotate(-5deg); } 70% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1) rotate(0); } }
+  @keyframes copied-check { 0% { opacity: 0; transform: scale(0) rotate(42deg); } 70% { opacity: 1; transform: scale(1.2) rotate(42deg); } 100% { opacity: 1; transform: scale(1) rotate(42deg); } }
+  @media (max-width: 520px) { button { max-width: calc(100vw - 24px); } kbd { display: none; } .label { gap: 5px; max-width: calc(100vw - 24px); } .source { max-width: 58vw; } .bottom-left button, .top-left button { left: 12px; } .bottom-right button, .top-right button { right: 12px; } }
   @media (forced-colors: active) { button, .highlight, .label { border: 2px solid ButtonText; forced-color-adjust: auto; } }
-  @media (prefers-reduced-motion: reduce) { button, .highlight { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { button, .target, .highlight { animation: none !important; transition: none !important; } }
 `;
